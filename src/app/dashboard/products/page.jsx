@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { Client, Databases, Query } from "appwrite";
-import { Search, Plus, Edit, Trash2, ChevronLeft, ChevronRight, FileText } from "lucide-react";
+import { Search, Plus, Edit, Trash2, ChevronLeft, ChevronRight, FileText, X} from "lucide-react";
 
 const client = new Client().setEndpoint("https://cloud.appwrite.io/v1").setProject("6750318900371dbd1cf3");
 
@@ -16,6 +16,9 @@ export default function ProductsPage() {
   const [selectAllPages, setSelectAllPages] = useState(false);
   const [showSelectionInfo, setShowSelectionInfo] = useState(false);
   const [totalDocuments, setTotalDocuments] = useState(0);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -45,13 +48,111 @@ export default function ProductsPage() {
         const isAllCurrentPageSelected = [...currentPageProductIds].every(id => selectedRows.has(id));
         setSelectAllPages(isAllCurrentPageSelected && selectedRows.size >= currentPageProductIds.size);
       } catch (error) {
-        console.error("Ошибка при загрузке товаров:", error);
+        console.error("Ошибка при загрузке записей:", error);
         setLoading(false);
       }
     };
 
     fetchProducts();
   }, [currentPage, selectedRows]);
+
+  const handleDeleteProducts = async () => {
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      // Convert Set to Array for iteration
+      const productsToDelete = Array.from(selectedRows);
+      
+      // Delete each selected product
+      const deletePromises = productsToDelete.map(productId => 
+        databases.deleteDocument(
+          "6750a65c001d7b857826", 
+          "6751443200130b3a0b9c", 
+          productId
+        )
+      );
+
+      // Wait for all deletions to complete
+      await Promise.all(deletePromises);
+
+      // Reset selection and close modal
+      setSelectedRows(new Set());
+      setShowDeleteModal(false);
+      setShowSelectionInfo(false);
+      setSelectAllPages(false);
+
+      // Refresh current page or go to previous page if no items left
+      if (products.length === selectedRows.size && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      } else {
+        // Trigger a re-fetch of products
+        const response = await databases.listDocuments("6750a65c001d7b857826", "6751443200130b3a0b9c", [
+          Query.orderDesc("$createdAt"),
+          Query.limit(10),
+          Query.offset((currentPage - 1) * 10),
+        ]);
+        setProducts(response.documents);
+        setTotalPages(Math.ceil(response.total / 10));
+        setTotalDocuments(response.total);
+      }
+    } catch (error) {
+      console.error("Ошибка при удалении записей:", error);
+      setDeleteError("Не удалось удалить запись. Попробуйте еще раз.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+    // Deletion Modal Component
+    const DeleteModal = () => {
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+            <div className="bg-white rounded-lg p-6 w-96">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-black">Подтверждение удаления</h2>
+                <button 
+                  onClick={() => setShowDeleteModal(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+              <p className="mb-6 text-black">
+                Вы действительно хотите удалить {selectedRows.size} записей?
+              </p>
+              {deleteError && (
+                <div className="bg-red-100 text-red-700 p-3 rounded-md mb-4">
+                  {deleteError}
+                </div>
+              )}
+              <div className="flex justify-end space-x-2">
+                <button 
+                  onClick={() => setShowDeleteModal(false)}
+                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300"
+                >
+                  Отмена
+                </button>
+                <button 
+                  onClick={handleDeleteProducts}
+                  disabled={isDeleting}
+                  className={`bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 
+                    ${isDeleting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {isDeleting ? 'Удаление...' : 'Да, удалить'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      };
+    
+      // Modify the delete button to show modal
+      const handleShowDeleteModal = () => {
+        if (selectedRows.size > 0) {
+          setShowDeleteModal(true);
+        }
+      };
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -129,18 +230,24 @@ export default function ProductsPage() {
         </div>
 
         <div className="flex space-x-2">
-          <button className="bg-green-500 text-white w-10 h-10 rounded-lg flex justify-center items-center hover:bg-green-600 transition" title="Добавить товар">
+          <button className="bg-green-500 text-white w-10 h-10 rounded-lg flex justify-center items-center hover:bg-green-600 transition" title="Добавить запись">
             <Plus size={20} />
           </button>
-          <button className="bg-red-500 text-white w-10 h-10 rounded-lg flex justify-center items-center hover:bg-red-600 transition" title="Удалить товар">
+          <button 
+            className={`bg-red-500 text-white w-10 h-10 rounded-lg flex justify-center items-center hover:bg-red-600 transition 
+                ${selectedRows.size === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+            title="Удалить запись"
+            onClick={handleShowDeleteModal}
+            disabled={selectedRows.size === 0}
+            >
             <Trash2 size={20} />
-          </button>
+            </button>
           <button className="bg-purple-500 text-white w-10 h-10 rounded-lg flex justify-center items-center hover:bg-purple-600 transition" title="Создать отчет">
             <FileText size={20} />
           </button>
         </div>
       </div>
-
+      {showDeleteModal && <DeleteModal />}
       <table className="w-full border-collapse mb-4">
         <thead>
           <tr className="bg-blue-50">
