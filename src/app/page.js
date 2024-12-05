@@ -53,15 +53,15 @@ export default function Login() {
         // Отображаем индикатор загрузки, пока проверяем сессию
         return (
             <div className="min-h-screen flex items-center justify-center bg-blue-50">
-                <div className="flex items-center justify-center">
-                    <div className="w-10 h-10 border-4 border-t-blue-600 border-blue-300 rounded-full animate-spin"></div>
+                <div className="flex justify-center items-center h-full">
+                    <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-blue-500"></div>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-blue-50">
+        <div className="min-h-screen flex items-center justify-center  bg-blue-50">
             <div className="bg-white p-8 rounded-lg shadow-md w-96">
                 <h2 className="text-2xl mb-6 text-center text-black">Вход в систему</h2>
                 {error && (
