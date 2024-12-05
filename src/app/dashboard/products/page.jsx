@@ -132,9 +132,6 @@ export default function ProductsPage() {
           <button className="bg-green-500 text-white w-10 h-10 rounded-lg flex justify-center items-center hover:bg-green-600 transition" title="Добавить товар">
             <Plus size={20} />
           </button>
-          <button className="bg-blue-500 text-white w-10 h-10 rounded-lg flex justify-center items-center hover:bg-blue-600 transition" title="Редактировать товар">
-            <Edit size={20} />
-          </button>
           <button className="bg-red-500 text-white w-10 h-10 rounded-lg flex justify-center items-center hover:bg-red-600 transition" title="Удалить товар">
             <Trash2 size={20} />
           </button>
