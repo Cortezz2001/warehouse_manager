@@ -20,7 +20,6 @@ const databases = new Databases(client);
 
 export default function ProductsPage() {
     const [products, setProducts] = useState([]);
-    const [allProducts, setAllProducts] = useState([]); // Храним все продукты
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
@@ -41,7 +40,8 @@ export default function ProductsPage() {
                     "6751443200130b3a0b9c",
                     [
                         Query.orderDesc("$createdAt"),
-                        Query.limit(100), // Загружаем больше записей для поиска
+                        Query.limit(10),
+                        Query.offset((currentPage - 1) * 10),
                         Query.select([
                             "$id",
                             "name",
@@ -54,9 +54,12 @@ export default function ProductsPage() {
                         ]),
                     ]
                 );
-                setAllProducts(response.documents); // Сохраняем все продукты
+                setProducts(response.documents);
+                setTotalPages(Math.ceil(response.total / 10));
                 setTotalDocuments(response.total);
                 setLoading(false);
+
+                // Проверяем, что чекбокс "выбрать все" должен быть активен только на текущей странице
                 const currentPageProductIds = new Set(
                     response.documents.map((product) => product.$id)
                 );
@@ -74,38 +77,17 @@ export default function ProductsPage() {
         };
 
         fetchProducts();
-    }, [selectedRows]);
-
-    useEffect(() => {
-        // Фильтруем продукты на основе поискового запроса
-        const filteredProducts = allProducts.filter((product) => {
-            const searchLower = searchQuery.toLowerCase();
-            return (
-                product.name.toLowerCase().includes(searchLower) ||
-                product.desc.toLowerCase().includes(searchLower) ||
-                product.price.toString().includes(searchLower) ||
-                (product.suppliers?.name &&
-                    product.suppliers.name
-                        .toLowerCase()
-                        .includes(searchLower)) ||
-                (product.categories?.name &&
-                    product.categories.name.toLowerCase().includes(searchLower))
-            );
-        });
-
-        // Устанавливаем текущие продукты для отображения на странице
-        setProducts(
-            filteredProducts.slice((currentPage - 1) * 10, currentPage * 10)
-        );
-        setTotalPages(Math.ceil(filteredProducts.length / 10));
-    }, [searchQuery, allProducts, currentPage]);
+    }, [currentPage, selectedRows]);
 
     const handleDeleteProducts = async () => {
         setIsDeleting(true);
         setDeleteError(null);
 
         try {
+            // Convert Set to Array for iteration
             const productsToDelete = Array.from(selectedRows);
+
+            // Delete each selected product
             const deletePromises = productsToDelete.map((productId) =>
                 databases.deleteDocument(
                     "6750a65c001d7b857826",
@@ -114,19 +96,33 @@ export default function ProductsPage() {
                 )
             );
 
+            // Wait for all deletions to complete
             await Promise.all(deletePromises);
+
+            // Reset selection and close modal
             setSelectedRows(new Set());
             setShowDeleteModal(false);
             setShowSelectionInfo(false);
             setSelectAllPages(false);
 
-            // Обновляем все продукты после удаления
-            const response = await databases.listDocuments(
-                "6750a65c001d7b857826",
-                "6751443200130b3a0b9c",
-                [Query.orderDesc("$createdAt"), Query.limit(100)]
-            );
-            setAllProducts(response.documents);
+            // Refresh current page or go to previous page if no items left
+            if (products.length === selectedRows.size && currentPage > 1) {
+                setCurrentPage(currentPage - 1);
+            } else {
+                // Trigger a re-fetch of products
+                const response = await databases.listDocuments(
+                    "6750a65c001d7b857826",
+                    "6751443200130b3a0b9c",
+                    [
+                        Query.orderDesc("$createdAt"),
+                        Query.limit(10),
+                        Query.offset((currentPage - 1) * 10),
+                    ]
+                );
+                setProducts(response.documents);
+                setTotalPages(Math.ceil(response.total / 10));
+                setTotalDocuments(response.total);
+            }
         } catch (error) {
             console.error("Ошибка при удалении записей:", error);
             setDeleteError("Не удалось удалить запись. Попробуйте еще раз.");
@@ -135,6 +131,7 @@ export default function ProductsPage() {
         }
     };
 
+    // Deletion Modal Component
     const DeleteModal = () => {
         return (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
@@ -181,13 +178,14 @@ export default function ProductsPage() {
     };
 
     const handleSearchChange = (e) => {
-        setSearchQuery(e.target.value);
+        setSearchQuery(e.target.value); // Обновляем поисковый запрос
     };
 
     const clearSearch = () => {
-        setSearchQuery("");
+        setSearchQuery(""); // Очищаем поисковый запрос
     };
 
+    // Modify the delete button to show modal
     const handleShowDeleteModal = () => {
         if (selectedRows.size > 0) {
             setShowDeleteModal(true);
@@ -236,6 +234,7 @@ export default function ProductsPage() {
 
         setSelectedRows(newSelectedRows);
 
+        // Проверка, выбраны ли все строки на текущей странице
         const currentPageProductIds = new Set(
             products.map((product) => product.$id)
         );
@@ -272,13 +271,13 @@ export default function ProductsPage() {
                         type="text"
                         placeholder="Поиск товаров..."
                         className="w-full pl-10 pr-4 py-2 border rounded-md focus:outline-blue-500 text-black"
-                        value={searchQuery}
-                        onChange={handleSearchChange}
+                        value={searchQuery} // Устанавливаем значение для поля поиска
+                        onChange={handleSearchChange} // Обработчик изменения значения
                     />
                     {searchQuery && (
                         <button
-                            onClick={clearSearch}
-                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text -gray-400 hover:text-gray-600 transition"
+                            onClick={clearSearch} // Очищаем поле поиска
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
                         >
                             <X size={20} />
                         </button>
