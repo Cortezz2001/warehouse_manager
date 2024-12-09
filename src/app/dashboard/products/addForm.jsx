@@ -1,0 +1,197 @@
+"use client";
+import React, { useState, useEffect } from "react";
+import { Client, Databases, Query } from "appwrite";
+import { ChevronRight } from "lucide-react";
+
+const client = new Client()
+    .setEndpoint("https://cloud.appwrite.io/v1")
+    .setProject("6750318900371dbd1cf3");
+
+const databases = new Databases(client);
+
+export default function AddProductPage({ onCancel, onProductAdded }) {
+    const [name, setName] = useState("");
+    const [desc, setDesc] = useState("");
+    const [price, setPrice] = useState("");
+    const [supplierId, setSupplierId] = useState("");
+    const [categoryId, setCategoryId] = useState("");
+    const [suppliers, setSuppliers] = useState([]);
+    const [categories, setCategories] = useState([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchSuppliers = async () => {
+            try {
+                const suppliersResponse = await databases.listDocuments(
+                    "6750a65c001d7b857826",
+                    "6750a6b200175bde0b9d"
+                );
+                setSuppliers(suppliersResponse.documents);
+            } catch (error) {
+                console.error("Ошибка при загрузке поставщиков:", error);
+            }
+        };
+
+        const fetchCategories = async () => {
+            try {
+                const categoriesResponse = await databases.listDocuments(
+                    "6750a65c001d7b857826",
+                    "6750a92d00172a547a05"
+                );
+                setCategories(categoriesResponse.documents);
+            } catch (error) {
+                console.error("Ошибка при загрузке категорий:", error);
+            }
+        };
+
+        fetchSuppliers();
+        fetchCategories();
+    }, []);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        setError(null);
+
+        try {
+            await databases.createDocument(
+                "6750a65c001d7b857826",
+                "6751443200130b3a0b9c",
+                "unique()",
+                {
+                    name,
+                    desc,
+                    price: parseFloat(price),
+                    suppliers: supplierId,
+                    categories: categoryId,
+                }
+            );
+
+            onProductAdded();
+        } catch (error) {
+            console.error("Ошибка при добавлении продукта:", error);
+            setError("Не удалось добавить продукт. Проверьте данные.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <div>
+            <div className="flex items-center mb-4 space-x-2">
+                <span
+                    className="cursor-pointer hover:underline text-2xl text-black font-semibold"
+                    onClick={onCancel}
+                >
+                    Товары
+                </span>
+                <ChevronRight
+                    size={24}
+                    className="text-black relative top-[2px]"
+                />
+                <span className="text-2xl text-black font-semibold">
+                    Добавление товара
+                </span>
+            </div>
+            <hr className="border-t border-gray-300 mb-6" />
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                    <label className="block text-black mb-2">Название</label>
+                    <input
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="w-full p-2 border rounded-md text-black"
+                        required
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-black mb-2">Описание</label>
+                    <textarea
+                        value={desc}
+                        onChange={(e) => setDesc(e.target.value)}
+                        className="w-full p-2 border rounded-md text-black"
+                        required
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-black mb-2">Цена</label>
+                    <input
+                        type="number"
+                        value={price}
+                        onChange={(e) => setPrice(e.target.value)}
+                        className="w-full p-2 border rounded-md text-black"
+                        min="0"
+                        step="0.01"
+                        required
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-black mb-2">Поставщик</label>
+                    <select
+                        value={supplierId}
+                        onChange={(e) => setSupplierId(e.target.value)}
+                        className="w-full p-2 border rounded-md text-black"
+                        required
+                    >
+                        <option value="" disabled hidden>
+                            Выберите поставщика
+                        </option>
+                        {suppliers.map((supplier) => (
+                            <option key={supplier.$id} value={supplier.$id}>
+                                {supplier.name}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                <div>
+                    <label className="block text-black mb-2">Категория</label>
+                    <select
+                        value={categoryId}
+                        onChange={(e) => setCategoryId(e.target.value)}
+                        className="w-full p-2 border rounded-md text-black"
+                        required
+                    >
+                        <option value="" disabled hidden>
+                            Выберите категорию
+                        </option>
+                        {categories.map((category) => (
+                            <option key={category.$id} value={category.$id}>
+                                {category.name}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                {error && (
+                    <div className="bg-red-100 text-red-700 p-3 rounded-md">
+                        {error}
+                    </div>
+                )}
+
+                <div className="flex justify-end space-x-2 mt-4">
+                    <button
+                        type="button"
+                        onClick={onCancel}
+                        className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600"
+                    >
+                        Отмена
+                    </button>
+                    <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className={`bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 
+                        ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
+                    >
+                        {isSubmitting ? "Добавление..." : "Добавить"}
+                    </button>
+                </div>
+            </form>
+        </div>
+    );
+}

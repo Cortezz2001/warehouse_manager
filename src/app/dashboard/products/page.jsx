@@ -11,7 +11,7 @@ import {
     FileText,
     X,
 } from "lucide-react";
-
+import AddProductPage from "./addForm";
 const client = new Client()
     .setEndpoint("https://cloud.appwrite.io/v1")
     .setProject("6750318900371dbd1cf3");
@@ -31,6 +31,7 @@ export default function ProductsPage() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState(null);
     const [searchQuery, setSearchQuery] = useState("");
+    const [isAdding, setIsAdding] = useState(false);
 
     useEffect(() => {
         const fetchProducts = async () => {
@@ -168,8 +169,26 @@ export default function ProductsPage() {
         );
     };
 
+    const handleAddClick = () => {
+        setIsAdding(true);
+    };
+
+    const handleCancelAdd = () => {
+        setIsAdding(false);
+    };
+
     const handleSearchChange = (e) => {
         setSearchQuery(e.target.value);
+    };
+
+    const handleAdded = async () => {
+        const response = await databases.listDocuments(
+            "6750a65c001d7b857826",
+            "6751443200130b3a0b9c",
+            [Query.orderDesc("$createdAt"), Query.limit(100)]
+        );
+        setAllProducts(response.documents);
+        setIsAdding(false);
     };
 
     const clearSearch = () => {
@@ -230,168 +249,187 @@ export default function ProductsPage() {
 
     return (
         <>
-            <h1 className="text-2xl mb-4 text-black font-semibold">Товары</h1>
-            <hr className="border-t border-gray-300 mb-6" />
-
-            <div className="flex justify-between mb-4">
-                <div className="relative flex-grow max-w-md mr-4">
-                    <input
-                        type="text"
-                        placeholder="Поиск товаров..."
-                        className="w-full pl-10 pr-4 py-2 border rounded-md focus:outline-blue-500 text-black"
-                        value={searchQuery}
-                        onChange={handleSearchChange}
-                    />
-                    {searchQuery && (
-                        <button
-                            onClick={clearSearch}
-                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text -gray-400 hover:text-gray-500 transition"
-                        >
-                            <X size={20} />
-                        </button>
-                    )}
-                    <Search
-                        className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                        size={20}
-                    />
-                </div>
-
-                <div className="flex space-x-2">
-                    <button
-                        className="bg-green-500 text-white w-10 h-10 rounded-lg flex justify-center items-center hover:bg-green-600 transition"
-                        title="Добавить запись"
-                    >
-                        <Plus size={20} />
-                    </button>
-                    <button
-                        className={`bg-red-500 text-white w-10 h-10 rounded-lg flex justify-center items-center hover:bg-red-600 transition 
-                ${
-                    selectedRows.size === 0
-                        ? "opacity-50 cursor-not-allowed"
-                        : ""
-                }`}
-                        title="Удалить запись"
-                        onClick={handleShowDeleteModal}
-                        disabled={selectedRows.size === 0}
-                    >
-                        <Trash2 size={20} />
-                    </button>
-                    <button
-                        className="bg-purple-500 text-white w-10 h-10 rounded-lg flex justify-center items-center hover:bg-purple-600 transition"
-                        title="Создать отчет"
-                    >
-                        <FileText size={20} />
-                    </button>
-                </div>
-            </div>
-            {showDeleteModal && <DeleteModal />}
-            <table className="w-full border-collapse mb-4">
-                <thead>
-                    <tr className="bg-blue-50">
-                        <th className="border p-2 w-12 text-center">
+            {isAdding ? (
+                <AddProductPage
+                    onCancel={handleCancelAdd}
+                    onProductAdded={handleAdded}
+                />
+            ) : (
+                <>
+                    <h1 className="text-2xl mb-4 text-black font-semibold">
+                        Товары
+                    </h1>
+                    <hr className="border-t border-gray-300 mb-6" />
+                    <div className="flex justify-between mb-4">
+                        <div className="relative flex-grow max-w-md mr-4">
                             <input
-                                type="checkbox"
-                                className="form-checkbox h-4 w-4 text-blue-600"
-                                checked={isAllSelected}
-                                onChange={toggleSelectAll}
+                                type="text"
+                                placeholder="Поиск товаров..."
+                                className="w-full pl-10 pr-4 py-2 border rounded-md focus:outline-blue-500 text-black"
+                                value={searchQuery}
+                                onChange={handleSearchChange}
                             />
-                        </th>
-                        <th className="border p-2 text-left text-black">
-                            Название
-                        </th>
-                        <th className="border p-2 text-left text-black">
-                            Описание
-                        </th>
-                        <th className="border p-2 text-left text-black">
-                            Цена
-                        </th>
-                        <th className="border p-2 text-left text-black">
-                            Поставщик
-                        </th>
-                        <th className="border p-2 text-left text-black">
-                            Категория
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {products.map((product) => (
-                        <tr
-                            key={product.$id}
-                            className="bg-white border hover:bg-blue-100"
-                        >
-                            <td className="border p-2 text-center">
-                                <input
-                                    type="checkbox"
-                                    className="form-checkbox h-4 w-4 text-blue-600"
-                                    checked={selectedRows.has(product.$id)}
-                                    onChange={() =>
-                                        toggleSelectRow(product.$id)
-                                    }
-                                />
-                            </td>
-                            <td className="border p-2 text-black max-w-[200px] truncate">
-                                {product.name}
-                            </td>
-                            <td className="border p-2 text-black max-w-[300px] truncate">
-                                {product.desc}
-                            </td>
-                            <td className="border p-2 text-black">
-                                {product.price} ₸
-                            </td>
-                            <td className="border p-2 text-black max-w-[150px] truncate">
-                                {product.suppliers?.name || "Не указан"}
-                            </td>
-                            <td className="border p-2 text-black max-w-[150px] truncate">
-                                {product.categories?.name || "Не указана"}
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+                            {searchQuery && (
+                                <button
+                                    onClick={clearSearch}
+                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text -gray-400 hover:text-gray-500 transition"
+                                >
+                                    <X size={20} />
+                                </button>
+                            )}
+                            <Search
+                                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                                size={20}
+                            />
+                        </div>
 
-            {showSelectionInfo && selectedRows.size > 0 && (
-                <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-white border border-gray-300 shadow-lg rounded-md p-4 flex justify-between items-center w-1/3">
-                    <span>
-                        {selectedRows.size} / {totalDocuments} записей выбрано
-                    </span>
-                    <button
-                        className="text-red-500"
-                        onClick={handleCancelSelection}
-                    >
-                        Отмена
-                    </button>
-                </div>
+                        <div className="flex space-x-2">
+                            <button
+                                className="bg-green-500 text-white w-10 h-10 rounded-lg flex justify-center items-center hover:bg-green-600 transition"
+                                title="Добавить запись"
+                                onClick={handleAddClick}
+                            >
+                                <Plus size={20} />
+                            </button>
+                            <button
+                                className={`bg-red-500 text-white w-10 h-10 rounded-lg flex justify-center items-center hover:bg-red-600 transition 
+                            ${
+                                selectedRows.size === 0
+                                    ? "opacity-50 cursor-not-allowed"
+                                    : ""
+                            }`}
+                                title="Удалить запись"
+                                onClick={handleShowDeleteModal}
+                                disabled={selectedRows.size === 0}
+                            >
+                                <Trash2 size={20} />
+                            </button>
+                            <button
+                                className="bg-purple-500 text-white w-10 h-10 rounded-lg flex justify-center items-center hover:bg-purple-600 transition"
+                                title="Создать отчет"
+                            >
+                                <FileText size={20} />
+                            </button>
+                        </div>
+                    </div>
+                    {showDeleteModal && <DeleteModal />}
+                    <table className="w-full border-collapse mb-4">
+                        <thead>
+                            <tr className="bg-blue-50">
+                                <th className="border p-2 w-12 text-center">
+                                    <input
+                                        type="checkbox"
+                                        className="form-checkbox h-4 w-4 text-blue-600"
+                                        checked={isAllSelected}
+                                        onChange={toggleSelectAll}
+                                    />
+                                </th>
+                                <th className="border p-2 text-left text-black">
+                                    Название
+                                </th>
+                                <th className="border p-2 text-left text-black">
+                                    Описание
+                                </th>
+                                <th className="border p-2 text-left text-black">
+                                    Цена
+                                </th>
+                                <th className="border p-2 text-left text-black">
+                                    Поставщик
+                                </th>
+                                <th className="border p-2 text-left text-black">
+                                    Категория
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {products.map((product) => (
+                                <tr
+                                    key={product.$id}
+                                    className="bg-white border hover:bg-blue-100"
+                                >
+                                    <td className="border p-2 text-center">
+                                        <input
+                                            type="checkbox"
+                                            className="form-checkbox h-4 w-4 text-blue-600"
+                                            checked={selectedRows.has(
+                                                product.$id
+                                            )}
+                                            onChange={() =>
+                                                toggleSelectRow(product.$id)
+                                            }
+                                        />
+                                    </td>
+                                    <td className="border p-2 text-black max-w-[200px] truncate">
+                                        {product.name}
+                                    </td>
+                                    <td className="border p-2 text-black max-w-[300px] truncate">
+                                        {product.desc}
+                                    </td>
+                                    <td className="border p-2 text-black">
+                                        {product.price} ₸
+                                    </td>
+                                    <td className="border p-2 text-black max-w-[ 150px] truncate">
+                                        {product.suppliers?.name || "Не указан"}
+                                    </td>
+                                    <td className="border p-2 text-black max-w-[150px] truncate">
+                                        {product.categories?.name ||
+                                            "Не указана"}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+
+                    {showSelectionInfo && selectedRows.size > 0 && (
+                        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-white border border-gray-300 shadow-lg rounded-md p-4 flex justify-between items-center w-1/3">
+                            <span>
+                                {selectedRows.size} / {totalDocuments} записей
+                                выбрано
+                            </span>
+                            <button
+                                className="text-red-500"
+                                onClick={handleCancelSelection}
+                            >
+                                Отмена
+                            </button>
+                        </div>
+                    )}
+
+                    <div className="flex justify-between items-center">
+                        <div className="text-gray-600">
+                            Страница {currentPage} из {totalPages}
+                        </div>
+                        <div className="flex space-x-2">
+                            <button
+                                className={`bg-gray-200 text-gray-700 p-2 rounded-lg hover:bg-gray-300 transition ${
+                                    currentPage === 1
+                                        ? "cursor-not-allowed opacity-50"
+                                        : ""
+                                }`}
+                                onClick={() =>
+                                    handlePageChange(currentPage - 1)
+                                }
+                                disabled={currentPage === 1}
+                            >
+                                <ChevronLeft size={20} />
+                            </button>
+                            <button
+                                className={`bg-gray-200 text-gray-700 p-2 rounded-lg hover:bg-gray-300 transition ${
+                                    currentPage === totalPages
+                                        ? "cursor-not-allowed opacity-50"
+                                        : ""
+                                }`}
+                                onClick={() =>
+                                    handlePageChange(currentPage + 1)
+                                }
+                                disabled={currentPage === totalPages}
+                            >
+                                <ChevronRight size={20} />
+                            </button>
+                        </div>
+                    </div>
+                </>
             )}
-
-            <div className="flex justify-between items-center">
-                <div className="text-gray-600">
-                    Страница {currentPage} из {totalPages}
-                </div>
-                <div className="flex space-x-2">
-                    <button
-                        className={`bg-gray-200 text-gray-700 p-2 rounded-lg hover:bg-gray-300 transition ${
-                            currentPage === 1
-                                ? "cursor-not-allowed opacity-50"
-                                : ""
-                        }`}
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        disabled={currentPage === 1}
-                    >
-                        <ChevronLeft size={20} />
-                    </button>
-                    <button
-                        className={`bg-gray-200 text-gray-700 p-2 rounded-lg hover:bg-gray-300 transition ${
-                            currentPage === totalPages
-                                ? "cursor-not-allowed opacity-50"
-                                : ""
-                        }`}
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                    >
-                        <ChevronRight size={20} />
-                    </button>
-                </div>
-            </div>
         </>
     );
 }
