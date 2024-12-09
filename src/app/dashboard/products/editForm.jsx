@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Client, Databases, Query } from "appwrite";
+import { Client, Databases } from "appwrite";
 import { ChevronRight, X } from "lucide-react";
 
 const client = new Client()
@@ -9,12 +9,12 @@ const client = new Client()
 
 const databases = new Databases(client);
 
-export default function AddProductPage({ onCancel, onProductAdded }) {
-    const [name, setName] = useState("");
-    const [desc, setDesc] = useState("");
-    const [price, setPrice] = useState("");
-    const [supplierId, setSupplierId] = useState("");
-    const [categoryId, setCategoryId] = useState("");
+export default function EditForm({ product, onCancel, onProductUpdated }) {
+    const [name, setName] = useState(product.name);
+    const [desc, setDesc] = useState(product.desc);
+    const [price, setPrice] = useState(product.price);
+    const [supplierId, setSupplierId] = useState(product.suppliers.$id);
+    const [categoryId, setCategoryId] = useState(product.categories.$id);
     const [suppliers, setSuppliers] = useState([]);
     const [categories, setCategories] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -56,10 +56,10 @@ export default function AddProductPage({ onCancel, onProductAdded }) {
         setError(null);
 
         try {
-            await databases.createDocument(
+            await databases.updateDocument(
                 "6750a65c001d7b857826",
                 "6751443200130b3a0b9c",
-                "unique()",
+                product.$id,
                 {
                     name,
                     desc,
@@ -71,8 +71,8 @@ export default function AddProductPage({ onCancel, onProductAdded }) {
 
             setShowSuccessModal(true);
         } catch (error) {
-            console.error("Ошибка при добавлении продукта:", error);
-            setError("Не удалось добавить продукт. Проверьте данные.");
+            console.error("Ошибка при обновлении товара:", error);
+            setError("Не удалось обновить товар. Проверьте данные.");
         } finally {
             setIsSubmitting(false);
         }
@@ -84,12 +84,12 @@ export default function AddProductPage({ onCancel, onProductAdded }) {
                 <div className="bg-white rounded-lg p-6 w-96">
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-xl font-semibold text-black">
-                            Успешное добавление
+                            Успешное обновление
                         </h2>
                         <button
                             onClick={() => {
                                 setShowSuccessModal(false);
-                                onProductAdded();
+                                onProductUpdated();
                             }}
                             className="text-gray-500 hover:text-gray-700"
                         >
@@ -97,13 +97,13 @@ export default function AddProductPage({ onCancel, onProductAdded }) {
                         </button>
                     </div>
                     <p className="mb-6 text-black">
-                        Товар &quot;{name}&quot; был успешно добавлен.
+                        Товар &quot;{name}&quot; был успешно обновлен.
                     </p>
                     <div className="flex justify-end">
                         <button
                             onClick={() => {
                                 setShowSuccessModal(false);
-                                onProductAdded();
+                                onProductUpdated();
                             }}
                             className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"
                         >
@@ -130,7 +130,7 @@ export default function AddProductPage({ onCancel, onProductAdded }) {
                     className="text-black relative top-[2px]"
                 />
                 <span className="text-2xl text-black font-semibold">
-                    Добавление товара
+                    Редактирование товара
                 </span>
             </div>
             <hr className="border-t border-gray-300 mb-6" />
@@ -227,7 +227,7 @@ export default function AddProductPage({ onCancel, onProductAdded }) {
                         className={`bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 
                         ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
                     >
-                        {isSubmitting ? "Добавление..." : "Добавить"}
+                        {isSubmitting ? "Обновление..." : "Обновить"}
                     </button>
                 </div>
             </form>

@@ -12,6 +12,7 @@ import {
     X,
 } from "lucide-react";
 import AddProductPage from "./addForm";
+import EditForm from "./editForm";
 const client = new Client()
     .setEndpoint("https://cloud.appwrite.io/v1")
     .setProject("6750318900371dbd1cf3");
@@ -28,10 +29,12 @@ export default function ProductsPage() {
     const [showSelectionInfo, setShowSelectionInfo] = useState(false);
     const [totalDocuments, setTotalDocuments] = useState(0);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [isAdding, setIsAdding] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editingProduct, setEditingProduct] = useState(null);
 
     useEffect(() => {
         const fetchProducts = async () => {
@@ -191,6 +194,11 @@ export default function ProductsPage() {
         setIsAdding(false);
     };
 
+    const handleEditClick = (product) => {
+        setEditingProduct(product);
+        setIsEditing(true);
+    };
+
     const clearSearch = () => {
         setSearchQuery("");
     };
@@ -253,6 +261,12 @@ export default function ProductsPage() {
                 <AddProductPage
                     onCancel={handleCancelAdd}
                     onProductAdded={handleAdded}
+                />
+            ) : isEditing ? (
+                <EditForm
+                    product={editingProduct}
+                    onCancel={() => setIsEditing(false)}
+                    onProductUpdated={handleAdded}
                 />
             ) : (
                 <>
@@ -356,7 +370,8 @@ export default function ProductsPage() {
                                 products.map((product) => (
                                     <tr
                                         key={product.$id}
-                                        className="bg-white border hover:bg-blue-100"
+                                        className="bg-white border hover:bg-blue-100 cursor-pointer"
+                                        onClick={() => handleEditClick(product)}
                                     >
                                         <td className="border p-2 text-center">
                                             <input
@@ -367,6 +382,9 @@ export default function ProductsPage() {
                                                 )}
                                                 onChange={() =>
                                                     toggleSelectRow(product.$id)
+                                                }
+                                                onClick={(e) =>
+                                                    e.stopPropagation()
                                                 }
                                             />
                                         </td>
