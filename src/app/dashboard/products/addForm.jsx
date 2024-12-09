@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { Client, Databases, Query } from "appwrite";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, X } from "lucide-react";
 
 const client = new Client()
     .setEndpoint("https://cloud.appwrite.io/v1")
@@ -19,6 +19,7 @@ export default function AddProductPage({ onCancel, onProductAdded }) {
     const [categories, setCategories] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState(null);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
 
     useEffect(() => {
         const fetchSuppliers = async () => {
@@ -68,7 +69,7 @@ export default function AddProductPage({ onCancel, onProductAdded }) {
                 }
             );
 
-            onProductAdded();
+            setShowSuccessModal(true);
         } catch (error) {
             console.error("Ошибка при добавлении продукта:", error);
             setError("Не удалось добавить продукт. Проверьте данные.");
@@ -77,8 +78,46 @@ export default function AddProductPage({ onCancel, onProductAdded }) {
         }
     };
 
+    const SuccessModal = () => {
+        return (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                <div className="bg-white rounded-lg p-6 w-96">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-semibold text-black">
+                            Успешное добавление
+                        </h2>
+                        <button
+                            onClick={() => {
+                                setShowSuccessModal(false);
+                                onProductAdded();
+                            }}
+                            className="text-gray-500 hover:text-gray-700"
+                        >
+                            <X size={24} />
+                        </button>
+                    </div>
+                    <p className="mb-6 text-black">
+                        Товар &quot;{name}&quot; был успешно добавлен.
+                    </p>
+                    <div className="flex justify-end">
+                        <button
+                            onClick={() => {
+                                setShowSuccessModal(false);
+                                onProductAdded();
+                            }}
+                            className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"
+                        >
+                            ОК
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div>
+            {showSuccessModal && <SuccessModal />}
             <div className="flex items-center mb-4 space-x-2">
                 <span
                     className="cursor-pointer hover:underline text-2xl text-black font-semibold"
