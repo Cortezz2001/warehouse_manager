@@ -25,7 +25,6 @@ export default function ProductsPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [selectedRows, setSelectedRows] = useState(new Set());
-    const [selectAllPages, setSelectAllPages] = useState(false);
     const [showSelectionInfo, setShowSelectionInfo] = useState(false);
     const [totalDocuments, setTotalDocuments] = useState(0);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -57,16 +56,6 @@ export default function ProductsPage() {
                 setAllProducts(response.documents); // Сохраняем все продукты
                 setTotalDocuments(response.total);
                 setLoading(false);
-                const currentPageProductIds = new Set(
-                    response.documents.map((product) => product.$id)
-                );
-                const isAllCurrentPageSelected = [
-                    ...currentPageProductIds,
-                ].every((id) => selectedRows.has(id));
-                setSelectAllPages(
-                    isAllCurrentPageSelected &&
-                        selectedRows.size >= currentPageProductIds.size
-                );
             } catch (error) {
                 console.error("Ошибка при загрузке записей:", error);
                 setLoading(false);
@@ -74,7 +63,7 @@ export default function ProductsPage() {
         };
 
         fetchProducts();
-    }, [selectedRows]);
+    }, []);
 
     useEffect(() => {
         // Фильтруем продукты на основе поискового запроса
@@ -118,7 +107,6 @@ export default function ProductsPage() {
             setSelectedRows(new Set());
             setShowDeleteModal(false);
             setShowSelectionInfo(false);
-            setSelectAllPages(false);
 
             // Обновляем все продукты после удаления
             const response = await databases.listDocuments(
@@ -199,58 +187,37 @@ export default function ProductsPage() {
     };
 
     const toggleSelectAll = () => {
-        if (!selectAllPages) {
-            // Получаем id всех документов на текущей странице
-            const currentPageProductIds = new Set(
-                products.map((product) => product.$id)
-            );
+        if (products.length === 0) return; // Если нет продуктов, ничего не делаем
 
-            // Создаем новый Set, объединяющий уже выбранные строки с новыми
-            const newSelectedRows = new Set(selectedRows);
-            currentPageProductIds.forEach((id) => newSelectedRows.add(id));
-
-            setSelectedRows(newSelectedRows);
-            setSelectAllPages(true);
+        const newSelectedRows = new Set(selectedRows);
+        if (products.every((product) => newSelectedRows.has(product.$id))) {
+            // Если все записи на странице выделены, снимаем выделение
+            products.forEach((product) => newSelectedRows.delete(product.$id));
         } else {
-            // Удаляем id документов текущей страницы из выбранных
-            const currentPageProductIds = new Set(
-                products.map((product) => product.$id)
-            );
-            const newSelectedRows = new Set(selectedRows);
-            currentPageProductIds.forEach((id) => newSelectedRows.delete(id));
-
-            setSelectedRows(newSelectedRows);
-            setSelectAllPages(false);
+            // Иначе выделяем все записи на странице
+            products.forEach((product) => newSelectedRows.add(product.$id));
         }
-
-        setShowSelectionInfo(true);
+        setSelectedRows(newSelectedRows);
+        setShowSelectionInfo(newSelectedRows.size > 0);
     };
 
     const toggleSelectRow = (id) => {
         const newSelectedRows = new Set(selectedRows);
         if (newSelectedRows.has(id)) {
-            newSelectedRows.delete(id);
+            newSelectedRows.delete(id); // Снимаем выделение
         } else {
-            newSelectedRows.add(id);
+            newSelectedRows.add(id); // Выделяем
         }
-
         setSelectedRows(newSelectedRows);
-
-        const currentPageProductIds = new Set(
-            products.map((product) => product.$id)
-        );
-        const isAllCurrentPageSelected = [...currentPageProductIds].every(
-            (id) => newSelectedRows.has(id)
-        );
-        setSelectAllPages(isAllCurrentPageSelected);
-
-        setShowSelectionInfo(true);
+        setShowSelectionInfo(newSelectedRows.size > 0);
     };
+    const isAllSelected =
+        products.length > 0 &&
+        products.every((product) => selectedRows.has(product.$id));
 
     const handleCancelSelection = () => {
-        setSelectedRows(new Set());
+        setSelectedRows(new Set()); // Снимаем выделения
         setShowSelectionInfo(false);
-        setSelectAllPages(false);
     };
 
     if (loading) {
@@ -278,7 +245,7 @@ export default function ProductsPage() {
                     {searchQuery && (
                         <button
                             onClick={clearSearch}
-                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text -gray-400 hover:text-gray-600 transition"
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text -gray-400 hover:text-gray-500 transition"
                         >
                             <X size={20} />
                         </button>
@@ -325,7 +292,7 @@ export default function ProductsPage() {
                             <input
                                 type="checkbox"
                                 className="form-checkbox h-4 w-4 text-blue-600"
-                                checked={selectAllPages}
+                                checked={isAllSelected}
                                 onChange={toggleSelectAll}
                             />
                         </th>
