@@ -4,7 +4,7 @@ import { Client, Databases, Query } from "appwrite";
 import {
     Search,
     Plus,
-    Edit,
+    AlertTriangle,
     Trash2,
     ChevronLeft,
     ChevronRight,
@@ -342,41 +342,54 @@ export default function ProductsPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {products.map((product) => (
-                                <tr
-                                    key={product.$id}
-                                    className="bg-white border hover:bg-blue-100"
-                                >
-                                    <td className="border p-2 text-center">
-                                        <input
-                                            type="checkbox"
-                                            className="form-checkbox h-4 w-4 text-blue-600"
-                                            checked={selectedRows.has(
-                                                product.$id
-                                            )}
-                                            onChange={() =>
-                                                toggleSelectRow(product.$id)
-                                            }
+                            {products.length === 0 ? (
+                                <tr>
+                                    <td colSpan="6" className="text-center p-4">
+                                        <AlertTriangle
+                                            className="inline-block mr-2"
+                                            size={20}
                                         />
-                                    </td>
-                                    <td className="border p-2 text-black max-w-[200px] truncate">
-                                        {product.name}
-                                    </td>
-                                    <td className="border p-2 text-black max-w-[300px] truncate">
-                                        {product.desc}
-                                    </td>
-                                    <td className="border p-2 text-black">
-                                        {product.price} ₸
-                                    </td>
-                                    <td className="border p-2 text-black max-w-[ 150px] truncate">
-                                        {product.suppliers?.name || "Не указан"}
-                                    </td>
-                                    <td className="border p-2 text-black max-w-[150px] truncate">
-                                        {product.categories?.name ||
-                                            "Не указана"}
+                                        Ничего не найдено по вашему запросу.
                                     </td>
                                 </tr>
-                            ))}
+                            ) : (
+                                products.map((product) => (
+                                    <tr
+                                        key={product.$id}
+                                        className="bg-white border hover:bg-blue-100"
+                                    >
+                                        <td className="border p-2 text-center">
+                                            <input
+                                                type="checkbox"
+                                                className="form-checkbox h-4 w-4 text-blue-600"
+                                                checked={selectedRows.has(
+                                                    product.$id
+                                                )}
+                                                onChange={() =>
+                                                    toggleSelectRow(product.$id)
+                                                }
+                                            />
+                                        </td>
+                                        <td className="border p-2 text-black max-w-[200px] truncate">
+                                            {product.name}
+                                        </td>
+                                        <td className="border p-2 text-black max-w-[300px] truncate">
+                                            {product.desc}
+                                        </td>
+                                        <td className="border p-2 text-black">
+                                            {product.price} ₸
+                                        </td>
+                                        <td className="border p-2 text-black max-w-[150px] truncate">
+                                            {product.suppliers?.name ||
+                                                "Не указан"}
+                                        </td>
+                                        <td className="border p-2 text-black max-w-[150px] truncate">
+                                            {product.categories?.name ||
+                                                "Не указана"}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
 
