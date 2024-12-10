@@ -148,6 +148,9 @@ export default function ProductsPage() {
         setAllProducts(response.documents);
         setSelectedRows(new Set()); // Очищаем выбранные записи
         setShowSelectionInfo(false);
+
+        // Обновляем totalDocuments
+        setTotalDocuments(response.total);
     };
 
     const handleSort = (column) => {
@@ -179,6 +182,9 @@ export default function ProductsPage() {
         );
         setAllProducts(response.documents);
         setIsAdding(false);
+
+        // Обновляем totalDocuments
+        setTotalDocuments(response.total);
     };
 
     const handleEditClick = (product) => {
