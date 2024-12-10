@@ -101,7 +101,7 @@ export default function EditWarehousePage({
             <hr className="border-t border-gray-300 mb-6" />
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                    <label className="block text-black mb-2">Локация</label>
+                    <label className="block text-black mb-2">Адрес</label>
                     <input
                         type="text"
                         value={location}
