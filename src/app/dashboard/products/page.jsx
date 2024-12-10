@@ -14,7 +14,7 @@ import {
 import AddProductPage from "./addForm";
 import EditForm from "./editForm";
 import pdfMake from "pdfmake/build/pdfmake";
-import pdfFonts from "pdfmake/build/vfs_fonts";
+import DeleteModal from "./deleteModal";
 const client = new Client()
     .setEndpoint("https://cloud.appwrite.io/v1")
     .setProject("6750318900371dbd1cf3");
@@ -31,10 +31,8 @@ export default function ProductsPage() {
     const [showSelectionInfo, setShowSelectionInfo] = useState(false);
     const [totalDocuments, setTotalDocuments] = useState(0);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const [deleteError, setDeleteError] = useState(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [isAdding, setIsAdding] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
     const [sortColumn, setSortColumn] = useState(null);
@@ -140,83 +138,16 @@ export default function ProductsPage() {
         setTotalPages(Math.ceil(filteredProducts.length / 10));
     }, [searchQuery, allProducts, currentPage, sortColumn, sortDirection]);
 
-    const handleDeleteProducts = async () => {
-        setIsDeleting(true);
-        setDeleteError(null);
-
-        try {
-            const productsToDelete = Array.from(selectedRows);
-            const deletePromises = productsToDelete.map((productId) =>
-                databases.deleteDocument(
-                    "6750a65c001d7b857826",
-                    "6751443200130b3a0b9c",
-                    productId
-                )
-            );
-
-            await Promise.all(deletePromises);
-            setSelectedRows(new Set());
-            setShowDeleteModal(false);
-            setShowSelectionInfo(false);
-
-            // Обновляем все продукты после удаления
-            const response = await databases.listDocuments(
-                "6750a65c001d7b857826",
-                "6751443200130b3a0b9c",
-                [Query.orderDesc("$createdAt"), Query.limit(100)]
-            );
-            setAllProducts(response.documents);
-        } catch (error) {
-            console.error("Ошибка при удалении записей:", error);
-            setDeleteError("Не удалось удалить запись. Попробуйте еще раз.");
-        } finally {
-            setIsDeleting(false);
-        }
-    };
-
-    const DeleteModal = () => {
-        return (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                <div className="bg-white rounded-lg p-6 w-96">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-semibold text-black">
-                            Подтверждение удаления
-                        </h2>
-                        <button
-                            onClick={() => setShowDeleteModal(false)}
-                            className="text-gray-500 hover:text-gray-700"
-                        >
-                            <X size={24} />
-                        </button>
-                    </div>
-                    <p className="mb-6 text-black">
-                        Вы действительно хотите удалить {selectedRows.size}{" "}
-                        записей?
-                    </p>
-                    {deleteError && (
-                        <div className="bg-red-100 text-red-700 p-3 rounded-md mb-4">
-                            {deleteError}
-                        </div>
-                    )}
-                    <div className="flex justify-end space-x-2">
-                        <button
-                            onClick={() => setShowDeleteModal(false)}
-                            className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300"
-                        >
-                            Отмена
-                        </button>
-                        <button
-                            onClick={handleDeleteProducts}
-                            disabled={isDeleting}
-                            className={`bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 
-                    ${isDeleting ? "opacity-50 cursor-not-allowed" : ""}`}
-                        >
-                            {isDeleting ? "Удаление..." : "Да, удалить"}
-                        </button>
-                    </div>
-                </div>
-            </div>
+    const handleDeleteComplete = async () => {
+        // Обновляем список продуктов после удаления
+        const response = await databases.listDocuments(
+            "6750a65c001d7b857826",
+            "6751443200130b3a0b9c",
+            [Query.orderDesc("$createdAt"), Query.limit(100)]
         );
+        setAllProducts(response.documents);
+        setSelectedRows(new Set()); // Очищаем выбранные записи
+        setShowSelectionInfo(false);
     };
 
     const handleSort = (column) => {
@@ -533,7 +464,13 @@ export default function ProductsPage() {
                             </button>
                         </div>
                     </div>
-                    {showDeleteModal && <DeleteModal />}
+                    {showDeleteModal && (
+                        <DeleteModal
+                            selectedRows={selectedRows}
+                            onClose={() => setShowDeleteModal(false)}
+                            onDeleteComplete={handleDeleteComplete}
+                        />
+                    )}
                     <table className="w-full border-collapse mb-4">
                         <thead>
                             <tr className="bg-blue-50">
