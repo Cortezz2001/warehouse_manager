@@ -9,11 +9,7 @@ const client = new Client()
 
 const databases = new Databases(client);
 
-export default function EditProductPage({
-    product,
-    onCancel,
-    onProductUpdated,
-}) {
+export default function EditForm({ product, onCancel, onProductUpdated }) {
     const [name, setName] = useState(product.name);
     const [desc, setDesc] = useState(product.desc);
     const [price, setPrice] = useState(product.price);

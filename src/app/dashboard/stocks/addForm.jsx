@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Client, Databases } from "appwrite";
+import { Client, Databases, Query } from "appwrite";
 import { ChevronRight, X } from "lucide-react";
 
 const client = new Client()
@@ -9,49 +9,43 @@ const client = new Client()
 
 const databases = new Databases(client);
 
-export default function EditProductPage({
-    product,
-    onCancel,
-    onProductUpdated,
-}) {
-    const [name, setName] = useState(product.name);
-    const [desc, setDesc] = useState(product.desc);
-    const [price, setPrice] = useState(product.price);
-    const [supplierId, setSupplierId] = useState(product.suppliers.$id);
-    const [categoryId, setCategoryId] = useState(product.categories.$id);
-    const [suppliers, setSuppliers] = useState([]);
-    const [categories, setCategories] = useState([]);
+export default function AddStockPage({ onCancel, onStockAdded }) {
+    const [quantity, setQuantity] = useState("");
+    const [productId, setProductId] = useState("");
+    const [warehouseId, setWarehouseId] = useState("");
+    const [products, setProducts] = useState([]);
+    const [warehouses, setWarehouses] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState(null);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
 
     useEffect(() => {
-        const fetchSuppliers = async () => {
+        const fetchProducts = async () => {
             try {
-                const suppliersResponse = await databases.listDocuments(
+                const productsResponse = await databases.listDocuments(
                     "6750a65c001d7b857826",
-                    "6750a6b200175bde0b9d"
+                    "6751443200130b3a0b9c"
                 );
-                setSuppliers(suppliersResponse.documents);
+                setProducts(productsResponse.documents);
             } catch (error) {
-                console.error("Ошибка при загрузке поставщиков:", error);
+                console.error("Ошибка при загрузке товаров:", error);
             }
         };
 
-        const fetchCategories = async () => {
+        const fetchWarehouses = async () => {
             try {
-                const categoriesResponse = await databases.listDocuments(
+                const warehousesResponse = await databases.listDocuments(
                     "6750a65c001d7b857826",
-                    "6750a92d00172a547a05"
+                    "67514b8c003152e8054d"
                 );
-                setCategories(categoriesResponse.documents);
+                setWarehouses(warehousesResponse.documents);
             } catch (error) {
-                console.error("Ошибка при загрузке категорий:", error);
+                console.error("Ошибка при загрузке складов:", error);
             }
         };
 
-        fetchSuppliers();
-        fetchCategories();
+        fetchProducts();
+        fetchWarehouses();
     }, []);
 
     const handleSubmit = async (e) => {
@@ -60,23 +54,47 @@ export default function EditProductPage({
         setError(null);
 
         try {
-            await databases.updateDocument(
+            // Сначала проверяем существующие записи
+            const existingStocksResponse = await databases.listDocuments(
                 "6750a65c001d7b857826",
-                "6751443200130b3a0b9c",
-                product.$id,
-                {
-                    name,
-                    desc,
-                    price: parseFloat(price),
-                    suppliers: supplierId,
-                    categories: categoryId,
-                }
+                "67514c74002d0fedcd30",
+                [
+                    Query.equal("products", productId),
+                    Query.equal("warehouses", warehouseId),
+                ]
             );
+
+            if (existingStocksResponse.documents.length > 0) {
+                // Если запись существует, обновляем количество
+                const existingStock = existingStocksResponse.documents[0];
+                await databases.updateDocument(
+                    "6750a65c001d7b857826",
+                    "67514c74002d0fedcd30",
+                    existingStock.$id,
+                    {
+                        quantity: existingStock.quantity + parseInt(quantity),
+                    }
+                );
+            } else {
+                // Если записи нет, создаем новую
+                await databases.createDocument(
+                    "6750a65c001d7b857826",
+                    "67514c74002d0fedcd30",
+                    "unique()",
+                    {
+                        quantity: parseInt(quantity),
+                        products: productId,
+                        warehouses: warehouseId,
+                    }
+                );
+            }
 
             setShowSuccessModal(true);
         } catch (error) {
-            console.error("Ошибка при обновлении товара:", error);
-            setError("Не удалось обновить товар. Проверьте данные.");
+            console.error("Ошибка при добавлении/обновлении записи:", error);
+            setError(
+                "Не удалось добавить или обновить запись. Проверьте данные."
+            );
         } finally {
             setIsSubmitting(false);
         }
@@ -88,12 +106,12 @@ export default function EditProductPage({
                 <div className="bg-white rounded-lg p-6 w-96">
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-xl font-semibold text-black">
-                            Успешное обновление
+                            Успешное добавление
                         </h2>
                         <button
                             onClick={() => {
                                 setShowSuccessModal(false);
-                                onProductUpdated();
+                                onStockAdded();
                             }}
                             className="text-gray-500 hover:text-gray-700"
                         >
@@ -101,13 +119,13 @@ export default function EditProductPage({
                         </button>
                     </div>
                     <p className="mb-6 text-black">
-                        Товар &quot;{name}&quot; был успешно обновлен.
+                        Запись была успешно добавлена.
                     </p>
                     <div className="flex justify-end">
                         <button
                             onClick={() => {
                                 setShowSuccessModal(false);
-                                onProductUpdated();
+                                onStockAdded();
                             }}
                             className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"
                         >
@@ -127,90 +145,64 @@ export default function EditProductPage({
                     className="cursor-pointer hover:underline text-2xl text-black font-semibold"
                     onClick={onCancel}
                 >
-                    Товары
+                    Запасы на складах
                 </span>
                 <ChevronRight
                     size={24}
                     className="text-black relative top-[2px]"
                 />
                 <span className="text-2xl text-black font-semibold">
-                    Редактирование товара
+                    Поступление товара
                 </span>
             </div>
             <hr className="border-t border-gray-300 mb-6" />
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                    <label className="block text-black mb-2">Название</label>
-                    <input
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="w-full p-2 border rounded-md text-black"
+                    <label className="block text-black mb-2">Товар</label>
+                    <select
+                        value={productId}
+                        onChange={(e) => setProductId(e.target.value)}
                         required
-                    />
+                        className="border border-gray-300 rounded-md p-2 w-full"
+                    >
+                        <option value="" disabled hidden>
+                            Выберите товар
+                        </option>
+                        {products.map((product) => (
+                            <option key={product.$id} value={product.$id}>
+                                {product.name}
+                            </option>
+                        ))}
+                    </select>
                 </div>
-
                 <div>
-                    <label className="block text-black mb-2">Описание</label>
-                    <textarea
-                        value={desc}
-                        onChange={(e) => setDesc(e.target.value)}
-                        className="w-full p-2 border rounded-md text-black h-56"
+                    <label className="block text-black mb-2">Склад</label>
+                    <select
+                        value={warehouseId}
+                        onChange={(e) => setWarehouseId(e.target.value)}
                         required
-                    />
+                        className="border border-gray-300 rounded-md p-2 w-full"
+                    >
+                        <option value="" disabled hidden>
+                            Выберите склад
+                        </option>
+                        {warehouses.map((warehouse) => (
+                            <option key={warehouse.$id} value={warehouse.$id}>
+                                {warehouse.location}
+                            </option>
+                        ))}
+                    </select>
                 </div>
-
                 <div>
-                    <label className="block text-black mb-2">Цена</label>
+                    <label className="block text-black mb-2">Количество</label>
                     <input
                         type="number"
-                        value={price}
-                        onChange={(e) => setPrice(e.target.value)}
-                        className="w-full p-2 border rounded-md text-black"
-                        min="0"
-                        step="0.01"
+                        value={quantity}
+                        onChange={(e) => setQuantity(e.target.value)}
                         required
+                        className="border border-gray-300 rounded-md p-2 w-full"
                     />
                 </div>
-
-                <div>
-                    <label className="block text-black mb-2">Поставщик</label>
-                    <select
-                        value={supplierId}
-                        onChange={(e) => setSupplierId(e.target.value)}
-                        className="w-full p-2 border rounded-md text-black"
-                        required
-                    >
-                        <option value="" disabled hidden>
-                            Выберите поставщика
-                        </option>
-                        {suppliers.map((supplier) => (
-                            <option key={supplier.$id} value={supplier.$id}>
-                                {supplier.name}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-
-                <div>
-                    <label className="block text-black mb-2">Категория</label>
-                    <select
-                        value={categoryId}
-                        onChange={(e) => setCategoryId(e.target.value)}
-                        className="w-full p-2 border rounded-md text-black"
-                        required
-                    >
-                        <option value="" disabled hidden>
-                            Выберите категорию
-                        </option>
-                        {categories.map((category) => (
-                            <option key={category.$id} value={category.$id}>
-                                {category.name}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-
                 {error && (
                     <div className="bg-red-100 text-red-700 p-3 rounded-md">
                         {error}
@@ -231,7 +223,7 @@ export default function EditProductPage({
                         className={`bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 
                         ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
                     >
-                        {isSubmitting ? "Обновление..." : "Обновить"}
+                        {isSubmitting ? "Добавление..." : "Добавить"}
                     </button>
                 </div>
             </form>

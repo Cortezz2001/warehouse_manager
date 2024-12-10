@@ -12,7 +12,7 @@ import {
     X,
 } from "lucide-react";
 import AddProductPage from "./addForm";
-import EditForm from "./editForm";
+import EditProductPage from "./editForm";
 import pdfMake from "pdfmake/build/pdfmake";
 import pdfFonts from "pdfmake/build/vfs_fonts";
 import DeleteModal from "./deleteModal";
@@ -407,7 +407,7 @@ export default function ProductsPage() {
                     onProductAdded={handleAdded}
                 />
             ) : isEditing ? (
-                <EditForm
+                <EditProductPage
                     product={editingProduct}
                     onCancel={() => setIsEditing(false)}
                     onProductUpdated={handleAdded}
