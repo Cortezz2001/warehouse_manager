@@ -10,10 +10,11 @@ import {
     ChevronRight,
     FileText,
     X,
-    ArrowUpAZ,
 } from "lucide-react";
 import AddProductPage from "./addForm";
 import EditForm from "./editForm";
+import pdfMake from "pdfmake/build/pdfmake";
+import pdfFonts from "pdfmake/build/vfs_fonts";
 const client = new Client()
     .setEndpoint("https://cloud.appwrite.io/v1")
     .setProject("6750318900371dbd1cf3");
@@ -302,6 +303,156 @@ export default function ProductsPage() {
         setShowSelectionInfo(false);
     };
 
+    const handleGenerateReport = () => {
+        let productsToExport =
+            selectedRows.size > 0
+                ? allProducts.filter((product) => selectedRows.has(product.$id))
+                : allProducts.filter((product) => {
+                      const searchLower = searchQuery.toLowerCase();
+                      return (
+                          product.name.toLowerCase().includes(searchLower) ||
+                          product.desc.toLowerCase().includes(searchLower) ||
+                          product.price.toString().includes(searchLower) ||
+                          (product.suppliers?.name &&
+                              product.suppliers.name
+                                  .toLowerCase()
+                                  .includes(searchLower)) ||
+                          (product.categories?.name &&
+                              product.categories.name
+                                  .toLowerCase()
+                                  .includes(searchLower))
+                      );
+                  });
+
+        // Применяем сортировку, если она установлена
+        if (sortColumn) {
+            productsToExport.sort((a, b) => {
+                let valueA, valueB;
+
+                switch (sortColumn) {
+                    case "name":
+                        valueA = a.name || "";
+                        valueB = b.name || "";
+                        break;
+                    case "desc":
+                        valueA = a.desc || "";
+                        valueB = b.desc || "";
+                        break;
+                    case "price":
+                        valueA = a.price || 0;
+                        valueB = b.price || 0;
+                        break;
+                    case "supplier":
+                        valueA = a.suppliers?.name || "";
+                        valueB = b.suppliers?.name || "";
+                        break;
+                    case "category":
+                        valueA = a.categories?.name || "";
+                        valueB = b.categories?.name || "";
+                        break;
+                    default:
+                        return 0;
+                }
+
+                // Сравнение значений с учетом направления сортировки
+                if (typeof valueA === "string") {
+                    return sortDirection === "asc"
+                        ? valueA.localeCompare(valueB)
+                        : valueB.localeCompare(valueA);
+                } else {
+                    return sortDirection === "asc"
+                        ? valueA - valueB
+                        : valueB - valueA;
+                }
+            });
+        }
+
+        // Подготавливаем данные для таблицы
+        const tableBody = [
+            [
+                "№",
+                "Название",
+                "Описание",
+                "Цена (тенге)",
+                "Поставщик",
+                "Категория",
+            ],
+        ];
+
+        productsToExport.forEach((product, index) => {
+            tableBody.push([
+                (index + 1).toString(),
+                product.name || "-",
+                product.desc || "-",
+                product.price ? `${product.price} тг` : "-",
+                product.suppliers?.name || "-",
+                product.categories?.name || "-",
+            ]);
+        });
+
+        const currentDate = new Date();
+        const formattedDate = currentDate.toLocaleString("ru-RU", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+        });
+
+        // Конфигурация документа
+        const documentDefinition = {
+            pageSize: "A4",
+            pageOrientation: "landscape",
+            content: [
+                {
+                    text: "Отчет по товарам",
+                    style: "header",
+                    alignment: "center",
+                    margin: [0, 0, 0, 10],
+                },
+                {
+                    table: {
+                        headerRows: 1,
+                        widths: ["auto", "*", "*", "auto", "auto", "auto"],
+                        body: tableBody,
+                    },
+                    layout: {
+                        fillColor: function (rowIndex) {
+                            return rowIndex % 2 === 0 ? "#f2f2f2" : null;
+                        },
+                    },
+                },
+                {
+                    text: `Всего записей: ${productsToExport.length}`,
+                    style: "footer",
+                    margin: [0, 10, 0, 0],
+                },
+                {
+                    text: `Дата и время создания: ${formattedDate}`,
+                    style: "footer",
+                    margin: [0, 10, 0, 0],
+                },
+            ],
+            styles: {
+                header: {
+                    fontSize: 16,
+                    bold: true,
+                },
+                footer: {
+                    fontSize: 10,
+                    italics: true,
+                },
+            },
+            defaultStyle: {
+                font: "Roboto",
+            },
+        };
+
+        // Создаем PDF
+        pdfMake.createPdf(documentDefinition).open();
+    };
+
     if (loading) {
         return (
             <div className="flex justify-center items-center h-full">
@@ -376,6 +527,7 @@ export default function ProductsPage() {
                             <button
                                 className="bg-purple-500 text-white w-10 h-10 rounded-lg flex justify-center items-center hover:bg-purple-600 transition"
                                 title="Создать отчет"
+                                onClick={handleGenerateReport}
                             >
                                 <FileText size={20} />
                             </button>
