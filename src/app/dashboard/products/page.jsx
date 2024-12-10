@@ -14,6 +14,7 @@ import {
 import AddProductPage from "./addForm";
 import EditForm from "./editForm";
 import pdfMake from "pdfmake/build/pdfmake";
+import pdfFonts from "pdfmake/build/vfs_fonts";
 import DeleteModal from "./deleteModal";
 const client = new Client()
     .setEndpoint("https://cloud.appwrite.io/v1")
