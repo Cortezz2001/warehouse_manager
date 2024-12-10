@@ -10,6 +10,7 @@ import {
     ChevronRight,
     FileText,
     X,
+    ArrowUpAZ,
 } from "lucide-react";
 import AddProductPage from "./addForm";
 import EditForm from "./editForm";
@@ -35,6 +36,8 @@ export default function ProductsPage() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
+    const [sortColumn, setSortColumn] = useState(null);
+    const [sortDirection, setSortDirection] = useState("asc");
 
     useEffect(() => {
         const fetchProducts = async () => {
@@ -71,7 +74,7 @@ export default function ProductsPage() {
 
     useEffect(() => {
         // Фильтруем продукты на основе поискового запроса
-        const filteredProducts = allProducts.filter((product) => {
+        let filteredProducts = allProducts.filter((product) => {
             const searchLower = searchQuery.toLowerCase();
             return (
                 product.name.toLowerCase().includes(searchLower) ||
@@ -86,12 +89,55 @@ export default function ProductsPage() {
             );
         });
 
-        // Устанавливаем текущие продукты для отображения на странице
+        // Сортировка, если выбрана колонка
+        if (sortColumn) {
+            filteredProducts.sort((a, b) => {
+                let valueA, valueB;
+
+                switch (sortColumn) {
+                    case "name":
+                        valueA = a.name || "";
+                        valueB = b.name || "";
+                        break;
+                    case "desc":
+                        valueA = a.desc || "";
+                        valueB = b.desc || "";
+                        break;
+                    case "price":
+                        valueA = a.price || 0;
+                        valueB = b.price || 0;
+                        break;
+                    case "supplier":
+                        valueA = a.suppliers?.name || "";
+                        valueB = b.suppliers?.name || "";
+                        break;
+                    case "category":
+                        valueA = a.categories?.name || "";
+                        valueB = b.categories?.name || "";
+                        break;
+                    default:
+                        return 0;
+                }
+
+                // Сравнение значений с учетом направления сортировки
+                if (typeof valueA === "string") {
+                    return sortDirection === "asc"
+                        ? valueA.localeCompare(valueB)
+                        : valueB.localeCompare(valueA);
+                } else {
+                    return sortDirection === "asc"
+                        ? valueA - valueB
+                        : valueB - valueA;
+                }
+            });
+        }
+
+        // Разбиваем отсортированные продукты по страницам
         setProducts(
             filteredProducts.slice((currentPage - 1) * 10, currentPage * 10)
         );
         setTotalPages(Math.ceil(filteredProducts.length / 10));
-    }, [searchQuery, allProducts, currentPage]);
+    }, [searchQuery, allProducts, currentPage, sortColumn, sortDirection]);
 
     const handleDeleteProducts = async () => {
         setIsDeleting(true);
@@ -170,6 +216,15 @@ export default function ProductsPage() {
                 </div>
             </div>
         );
+    };
+
+    const handleSort = (column) => {
+        if (sortColumn === column) {
+            setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+        } else {
+            setSortColumn(column);
+            setSortDirection("asc");
+        }
     };
 
     const handleAddClick = () => {
@@ -338,20 +393,70 @@ export default function ProductsPage() {
                                         onChange={toggleSelectAll}
                                     />
                                 </th>
-                                <th className="border p-2 text-left text-black">
+                                <th
+                                    className="border p-2 text-left text-black cursor-pointer hover:bg-blue-100"
+                                    onClick={() => handleSort("name")}
+                                >
                                     Название
+                                    {sortColumn === "name" && (
+                                        <span className="ml-2">
+                                            {sortDirection === "asc"
+                                                ? "▲"
+                                                : "▼"}
+                                        </span>
+                                    )}
                                 </th>
-                                <th className="border p-2 text-left text-black">
+                                <th
+                                    className="border p-2 text-left text-black cursor-pointer hover:bg-blue-100"
+                                    onClick={() => handleSort("desc")}
+                                >
                                     Описание
+                                    {sortColumn === "desc" && (
+                                        <span className="ml-2">
+                                            {sortDirection === "asc"
+                                                ? "▲"
+                                                : "▼"}
+                                        </span>
+                                    )}
                                 </th>
-                                <th className="border p-2 text-left text-black">
+                                <th
+                                    className="border p-2 text-left text-black cursor-pointer hover:bg-blue-100"
+                                    onClick={() => handleSort("price")}
+                                >
                                     Цена
+                                    {sortColumn === "price" && (
+                                        <span className="ml-2">
+                                            {sortDirection === "asc"
+                                                ? "▲"
+                                                : "▼"}
+                                        </span>
+                                    )}
                                 </th>
-                                <th className="border p-2 text-left text-black">
+                                <th
+                                    className="border p-2 text-left text-black cursor-pointer hover:bg-blue-100"
+                                    onClick={() => handleSort("supplier")}
+                                >
                                     Поставщик
+                                    {sortColumn === "supplier" && (
+                                        <span className="ml-2">
+                                            {sortDirection === "asc"
+                                                ? "▲"
+                                                : "▼"}
+                                        </span>
+                                    )}
                                 </th>
-                                <th className="border p-2 text-left text-black">
+                                <th
+                                    className="border p-2 text-left text-black cursor-pointer hover:bg-blue-100"
+                                    onClick={() => handleSort("category")}
+                                >
                                     Категория
+                                    {sortColumn === "category" && (
+                                        <span className="ml-2">
+                                            {sortDirection === "asc"
+                                                ? "▲"
+                                                : "▼"}
+                                        </span>
+                                    )}
                                 </th>
                             </tr>
                         </thead>
