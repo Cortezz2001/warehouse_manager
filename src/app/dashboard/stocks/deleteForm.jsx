@@ -10,75 +10,46 @@ const client = new Client()
 const databases = new Databases(client);
 
 export default function DeleteStockPage({ onCancel, onStockDeleted }) {
+    const [stocks, setStocks] = useState([]);
+    const [selectedStock, setSelectedStock] = useState("");
     const [quantity, setQuantity] = useState("");
-    const [productId, setProductId] = useState("");
-    const [warehouseId, setWarehouseId] = useState("");
-    const [products, setProducts] = useState([]);
-    const [warehouses, setWarehouses] = useState([]);
-    const [currentStock, setCurrentStock] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState(null);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
 
     useEffect(() => {
-        const fetchProducts = async () => {
+        const fetchStocks = async () => {
             try {
-                const productsResponse = await databases.listDocuments(
+                // Получаем все записи stocks с populated данными о товарах и складах
+                const stocksResponse = await databases.listDocuments(
                     "6750a65c001d7b857826",
-                    "6751443200130b3a0b9c"
+                    "67514c74002d0fedcd30",
+                    [
+                        Query.greaterThan("quantity", 0),
+                        Query.orderDesc("$createdAt"),
+                    ]
                 );
-                setProducts(productsResponse.documents);
+
+                // Наполняем stocks данными о товарах и складах
+                const populatedStocks = stocksResponse.documents.map(
+                    (stock) => ({
+                        ...stock,
+                        productName:
+                            stock.products?.name || "Неизвестный товар",
+                        warehouseLocation:
+                            stock.warehouses?.location || "Неизвестный склад",
+                    })
+                );
+
+                setStocks(populatedStocks);
             } catch (error) {
-                console.error("Ошибка при загрузке товаров:", error);
+                console.error("Ошибка при загрузке запасов:", error);
+                setError("Не удалось загрузить данные о запасах");
             }
         };
 
-        const fetchWarehouses = async () => {
-            try {
-                const warehousesResponse = await databases.listDocuments(
-                    "6750a65c001d7b857826",
-                    "67514b8c003152e8054d"
-                );
-                setWarehouses(warehousesResponse.documents);
-            } catch (error) {
-                console.error("Ошибка при загрузке складов:", error);
-            }
-        };
-
-        fetchProducts();
-        fetchWarehouses();
+        fetchStocks();
     }, []);
-
-    useEffect(() => {
-        const fetchCurrentStock = async () => {
-            if (productId && warehouseId) {
-                try {
-                    const existingStocksResponse =
-                        await databases.listDocuments(
-                            "6750a65c001d7b857826",
-                            "67514c74002d0fedcd30",
-                            [
-                                Query.equal("products", productId),
-                                Query.equal("warehouses", warehouseId),
-                            ]
-                        );
-
-                    if (existingStocksResponse.documents.length > 0) {
-                        setCurrentStock(existingStocksResponse.documents[0]);
-                    } else {
-                        setCurrentStock(null);
-                    }
-                } catch (error) {
-                    console.error(
-                        "Ошибка при загрузке текущих запасов:",
-                        error
-                    );
-                }
-            }
-        };
-
-        fetchCurrentStock();
-    }, [productId, warehouseId]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -86,37 +57,37 @@ export default function DeleteStockPage({ onCancel, onStockDeleted }) {
         setError(null);
 
         try {
-            if (currentStock) {
-                const currentQuantity = currentStock.quantity;
+            const stock = stocks.find((s) => s.$id === selectedStock);
+            const newQuantity = stock.quantity - parseInt(quantity);
 
-                if (parseInt(quantity) > currentQuantity) {
-                    setError("Количество для списания превышает доступное.");
-                    return;
-                }
-
-                if (parseInt(quantity) === currentQuantity) {
-                    // Удаляем запись, если списываем всё количество
-                    await databases.deleteDocument(
-                        "6750a65c001d7b857826",
-                        "67514c74002d0fedcd30",
-                        currentStock.$id
-                    );
-                } else {
-                    // Обновляем количество
-                    await databases.updateDocument(
-                        "6750a65c001d7b857826",
-                        "67514c74002d0fedcd30",
-                        currentStock.$id,
-                        {
-                            quantity: currentQuantity - parseInt(quantity),
-                        }
-                    );
-                }
-
-                setShowSuccessModal(true);
-            } else {
-                setError("Запись не найдена для выбранного товара и склада.");
+            if (newQuantity < 0) {
+                setError(
+                    "Невозможно списать больше товара, чем есть на складе"
+                );
+                setIsSubmitting(false);
+                return;
             }
+
+            if (newQuantity === 0) {
+                // Если количество становится 0, удаляем документ
+                await databases.deleteDocument(
+                    "6750a65c001d7b857826",
+                    "67514c74002d0fedcd30",
+                    selectedStock
+                );
+            } else {
+                // Обновляем количество
+                await databases.updateDocument(
+                    "6750a65c001d7b857826",
+                    "67514c74002d0fedcd30",
+                    selectedStock,
+                    {
+                        quantity: newQuantity,
+                    }
+                );
+            }
+
+            setShowSuccessModal(true);
         } catch (error) {
             console.error("Ошибка при списании товара:", error);
             setError("Не удалось списать товар. Проверьте данные.");
@@ -131,8 +102,8 @@ export default function DeleteStockPage({ onCancel, onStockDeleted }) {
                 <div className="bg-white rounded-lg p-6 w-96">
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-xl font-semibold text-black">
-                            Успешное списание
-                        </h2>{" "}
+                            Списание выполнено
+                        </h2>
                         <button
                             onClick={() => {
                                 setShowSuccessModal(false);
@@ -144,7 +115,7 @@ export default function DeleteStockPage({ onCancel, onStockDeleted }) {
                         </button>
                     </div>
                     <p className="mb-6 text-black">
-                        Запись была успешно списана.
+                        Товар успешно списан со склада.
                     </p>
                     <div className="flex justify-end">
                         <button
@@ -183,37 +154,21 @@ export default function DeleteStockPage({ onCancel, onStockDeleted }) {
             <hr className="border-t border-gray-300 mb-6" />
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                    <label className="block text-black mb-2">Товар</label>
+                    <label className="block text-black mb-2">
+                        Товар и склад
+                    </label>
                     <select
-                        value={productId}
-                        onChange={(e) => setProductId(e.target.value)}
+                        value={selectedStock}
+                        onChange={(e) => setSelectedStock(e.target.value)}
                         required
                         className="border border-gray-300 rounded-md p-2 w-full"
                     >
                         <option value="" disabled hidden>
-                            Выберите товар
+                            Выберите товар на складе
                         </option>
-                        {products.map((product) => (
-                            <option key={product.$id} value={product.$id}>
-                                {product.name}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-                <div>
-                    <label className="block text-black mb-2">Склад</label>
-                    <select
-                        value={warehouseId}
-                        onChange={(e) => setWarehouseId(e.target.value)}
-                        required
-                        className="border border-gray-300 rounded-md p-2 w-full"
-                    >
-                        <option value="" disabled hidden>
-                            Выберите склад
-                        </option>
-                        {warehouses.map((warehouse) => (
-                            <option key={warehouse.$id} value={warehouse.$id}>
-                                {warehouse.location}
+                        {stocks.map((stock) => (
+                            <option key={stock.$id} value={stock.$id}>
+                                {`${stock.productName} (${stock.warehouseLocation}) - ${stock.quantity} шт.`}
                             </option>
                         ))}
                     </select>
@@ -224,15 +179,17 @@ export default function DeleteStockPage({ onCancel, onStockDeleted }) {
                         type="number"
                         value={quantity}
                         onChange={(e) => setQuantity(e.target.value)}
+                        max={
+                            selectedStock
+                                ? stocks.find((s) => s.$id === selectedStock)
+                                      ?.quantity
+                                : 0
+                        }
+                        min={1}
                         required
                         className="border border-gray-300 rounded-md p-2 w-full"
                     />
                 </div>
-                {currentStock && (
-                    <div className="text-black mb-2">
-                        Доступное количество: {currentStock.quantity}
-                    </div>
-                )}
                 {error && (
                     <div className="bg-red-100 text-red-700 p-3 rounded-md">
                         {error}
@@ -249,9 +206,13 @@ export default function DeleteStockPage({ onCancel, onStockDeleted }) {
                     </button>
                     <button
                         type="submit"
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || !selectedStock}
                         className={`bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 
-                        ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
+                        ${
+                            isSubmitting || !selectedStock
+                                ? "opacity-50 cursor-not-allowed"
+                                : ""
+                        }`}
                     >
                         {isSubmitting ? "Списание..." : "Списать"}
                     </button>
