@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Client, Databases, Query } from "appwrite";
+import { Client, Databases, Query, Account } from "appwrite";
 import { ChevronRight, X } from "lucide-react";
 
 const client = new Client()
@@ -8,6 +8,7 @@ const client = new Client()
     .setProject("6750318900371dbd1cf3");
 
 const databases = new Databases(client);
+const account = new Account(client);
 
 export default function DeleteStockPage({ onCancel, onStockDeleted }) {
     const [stocks, setStocks] = useState([]);
@@ -86,6 +87,23 @@ export default function DeleteStockPage({ onCancel, onStockDeleted }) {
                     }
                 );
             }
+
+            // Получаем информацию о текущем пользователе
+            const user = await account.get(); // Получаем информацию о пользователе
+
+            // Добавляем запись в коллекцию movements
+            await databases.createDocument(
+                "6750a65c001d7b857826",
+                "6751508c00274d3012e5",
+                "unique()",
+                {
+                    user_id: user.$id,
+                    type: "Списание",
+                    product: stock.productName,
+                    warehouse: stock.warehouseLocation,
+                    quantity: parseInt(quantity),
+                }
+            );
 
             setShowSuccessModal(true);
         } catch (error) {
