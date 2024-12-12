@@ -86,7 +86,7 @@ export default function MovementsPage() {
             return (
                 movement.product.toLowerCase().includes(searchLower) ||
                 movement.warehouse.toLowerCase().includes(searchLower) ||
-                users[movement.user_id]?.toLowerCase().includes(searchLower) ||
+                movement.user_id.toLowerCase().includes(searchLower) ||
                 movement.type.toLowerCase().includes(searchLower)
             );
         });
@@ -113,8 +113,8 @@ export default function MovementsPage() {
                         valueB = b.warehouse || "";
                         break;
                     case "user":
-                        valueA = users[a.user_id] || "";
-                        valueB = users[b.user_id] || "";
+                        valueA = a.user_id || "";
+                        valueB = b.user_id || "";
                         break;
                     case "createdAt":
                         valueA = new Date(a.$createdAt);
@@ -213,7 +213,7 @@ export default function MovementsPage() {
                           movement.warehouse
                               .toLowerCase()
                               .includes(searchLower) ||
-                          users[movement.user_id]
+                          movement.user_id
                               ?.toLowerCase()
                               .includes(searchLower) ||
                           movement.type.toLowerCase().includes(searchLower)
@@ -243,8 +243,8 @@ export default function MovementsPage() {
                         valueB = b.warehouse || "";
                         break;
                     case "user":
-                        valueA = users[a.user_id] || "";
-                        valueB = users[b.user_id] || "";
+                        valueA = a.user_id || "";
+                        valueB = b.user_id || "";
                         break;
                     case "createdAt":
                         valueA = new Date(a.$createdAt);
@@ -285,7 +285,7 @@ export default function MovementsPage() {
                 movement.product || "-",
                 movement.quantity || "-",
                 movement.warehouse || "-",
-                users[movement.user_id] || "-",
+                movement.user_id || "-",
                 new Date(movement.$createdAt).toLocaleString("ru-RU"),
             ]);
         });
@@ -524,7 +524,7 @@ export default function MovementsPage() {
                                     {movement.warehouse || "Не указан"}
                                 </td>
                                 <td className="border p-2 text-black max-w-[150px] truncate">
-                                    {users[movement.user_id] || "Не указан"}
+                                    {movement.user_id || "Не указан"}
                                 </td>
                                 <td className="border p-2 text-black">
                                     {new Date(

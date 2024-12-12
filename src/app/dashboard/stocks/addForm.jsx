@@ -99,7 +99,7 @@ export default function AddStockPage({ onCancel, onStockAdded }) {
                 "6751508c00274d3012e5",
                 "unique()",
                 {
-                    user_id: user.$id,
+                    user_id: user.name,
                     type: "Поступление",
                     product: products.find((p) => p.$id === productId)?.name,
                     warehouse: warehouses.find((w) => w.$id === warehouseId)

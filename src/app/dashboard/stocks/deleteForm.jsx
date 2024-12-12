@@ -97,7 +97,7 @@ export default function DeleteStockPage({ onCancel, onStockDeleted }) {
                 "6751508c00274d3012e5",
                 "unique()",
                 {
-                    user_id: user.$id,
+                    user_id: user.name,
                     type: "Списание",
                     product: stock.productName,
                     warehouse: stock.warehouseLocation,
